@@ -23,7 +23,7 @@ const chatSchema = new mongoose.Schema({
 const Chat = mongoose.model('Chat', chatSchema);
 
 // Gemini API Setup
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 // History Route
 app.get('/api/history', async (req, res) => {
@@ -40,9 +40,13 @@ app.get('/api/history', async (req, res) => {
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY Render environment variables mein missing hai.' });
+    }
     
-    // Updated Gemini model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // Stable Gemini Model
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(message);
     const botResponse = result.response.text();
 
@@ -51,8 +55,8 @@ app.post('/api/chat', async (req, res) => {
 
     res.json({ reply: botResponse });
   } catch (error) {
-    console.error("Chat Error:", error);
-    res.status(500).json({ error: 'Backend processing mein error aaya.' });
+    console.error("Gemini API Error Detail:", error);
+    res.status(500).json({ error: 'Gemini API call failed.' });
   }
 });
 
