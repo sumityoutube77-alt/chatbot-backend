@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const { GoogleGenAI } = require('@google/genai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
 const app = express();
@@ -22,8 +22,8 @@ const chatSchema = new mongoose.Schema({
 });
 const Chat = mongoose.model('Chat', chatSchema);
 
-// New Gemini SDK Initialization
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Gemini API Setup
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 // History Route
 app.get('/api/history', async (req, res) => {
@@ -41,13 +41,13 @@ app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
 
-    // Naye SDK ka call method
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: message,
-    });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY missing hai.' });
+    }
 
-    const botResponse = response.text;
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(message);
+    const botResponse = result.response.text();
 
     const newChat = new Chat({ userMessage: message, botResponse: botResponse });
     await newChat.save();
