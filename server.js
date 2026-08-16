@@ -6,7 +6,6 @@ require('dotenv').config();
 
 const app = express();
 
-// CORS setup taki GitHub Pages access kar sake
 app.use(cors());
 app.use(express.json());
 
@@ -15,7 +14,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Connected successfully!'))
   .catch(err => console.log('MongoDB Connection Error:', err));
 
-// MongoDB Schema
+// Chat Schema
 const chatSchema = new mongoose.Schema({
   userMessage: String,
   botResponse: String,
@@ -23,44 +22,41 @@ const chatSchema = new mongoose.Schema({
 });
 const Chat = mongoose.model('Chat', chatSchema);
 
-// Gemini API Configuration
+// Gemini API Setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// 1. NAYA ROUTE: Purani chat history fetch karne ke liye
+// History Route
 app.get('/api/history', async (req, res) => {
   try {
-    // Database se sabhi chats nikalna aur purane se naye ke kram (timestamp) mein sort karna
     const chats = await Chat.find().sort({ timestamp: 1 });
     res.json(chats);
   } catch (error) {
     console.error("History Error:", error);
-    res.status(500).json({ error: 'History fetch karne mein problem aayi.' });
+    res.status(500).json({ error: 'History fetch nahi ho saki.' });
   }
 });
 
-// 2. PURANA ROUTE: Naye message bhejne aur save karne ke liye
+// Chat Route
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
     
-    // Gemini model call
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Updated Gemini model
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(message);
     const botResponse = result.response.text();
 
-    // MongoDB mein save karna
     const newChat = new Chat({ userMessage: message, botResponse: botResponse });
     await newChat.save();
 
-    // Frontend ko reply bhejna
     res.json({ reply: botResponse });
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: 'Backend mein kuch gadbad hai.' });
+    console.error("Chat Error:", error);
+    res.status(500).json({ error: 'Backend processing mein error aaya.' });
   }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
